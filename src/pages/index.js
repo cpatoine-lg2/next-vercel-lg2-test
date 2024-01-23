@@ -1,36 +1,66 @@
 import Head from "next/head";
-import styles from "@/styles/Home.module.css";
 import Header from "../../components/Header";
-import { useState, useEffect } from "react";
+import { performRequest } from "../../lib/datocms";
 
-export default function Home() {
-	const [data, setData] = useState(null);
-	const [load, setLoad] = useState(true);
+const PAGE_CONTENT_QUERY = `
+  query Home {
+    home {
+      pTitle
+      pImg {
+        id
+        width
+        height
+        url
+        alt
+        title
+        responsiveImage {
+          base64
+        }
+        focalPoint {
+          x
+          y
+        }
+      }
+    }
+  }
+`;
 
-	// https://dog.ceo/api/breeds/image/random
+export async function getServerSideProps() {
+    try {
+        const { data } = await performRequest({ query: PAGE_CONTENT_QUERY });
 
-	useEffect(() => {
-        const fetchData = async () => {
-			const res = await fetch("https://dog.ceo/api/breeds/image/random");
-			const data = await res.json();
-			setData(data);
-			setLoad(true);
-		};
+        if (!data || !data.home) {
+            throw new Error("Data not found or not structured as expected");
+        }
 
-        fetchData();
-	}, []);
-
-	return (
-		<>
-			<Head>
-				<title>Accueil</title>
-			</Head>
-
-			<Header />
-
-			<h1>Accueil</h1>
-
-			{load ? (<img src={data?.message} />) : (<p>Chargement...</p>)}
-		</>
-	);
+        return {
+            props: {
+                data,
+            },
+        };
+    } catch (error) {
+        console.error("Error fetching data:", error.message);
+        return {
+            props: {
+                data: null, // or handle the error as needed
+            },
+        };
+    }
 }
+
+const Home = ({ data }) => {
+    return (
+        <>
+            <Head>
+                <title>Accueil</title>
+            </Head>
+            
+            <Header />
+
+            <h1>{data.home.pTitle}</h1>
+            <img src={data.home.pImg.url}></img>
+        </>
+    );
+};
+
+export default Home;
